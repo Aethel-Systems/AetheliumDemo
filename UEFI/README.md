@@ -1,0 +1,1 @@
+## This directory is UEFIDemo; enter the subdirectories to view the relevant examples.

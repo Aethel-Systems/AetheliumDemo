@@ -1,0 +1,81 @@
+const AER/SHELL/SIZE: UInt64 = 4096
+
+@entry
+@gate(type: \efi)
+func efi/main(image/handle: ptr<Void>, sys/table: ptr<EFI/SYSTEM/TABLE>) : UInt64 {
+    // 修复：将庞大的 SHELL 上下文分配到 UEFI Pool 中，避免栈溢出
+    let shell/base: UInt64 = uefi/allocate/pool(sys/table, AER/SHELL/SIZE)
+    if shell/base == 0 {
+        return uefi/halt(sys/table, 71)
+    }
+    
+    let shell: ptr<AER/SHELL> = cast<ptr<AER/SHELL>>(shell/base)
+
+
+    shell\sys/table = 0
+    shell\gop = 0
+    shell\ticks = 0
+    shell\exit/requested = 0
+    shell\last/esc/ticks = 0
+    shell\exit/armed/after = 0
+    shell\memory/total/mb = 0
+    shell\memory/used/mb = 0
+    shell\clock/year = 0
+    shell\clock/month = 0
+    shell\clock/day = 0
+    shell\clock/hour = 0
+    shell\clock/minute = 0
+    shell\clock/second = 0
+    shell\sensor/cpu/temp = 0
+    shell\sensor/cpu/online = 0
+    shell\back\base = 0
+    shell\back\width = 0
+    shell\back\height = 0
+    shell\back\stride = 0
+    shell\back\bytes = 0
+    shell\back\frame/buffer = 0
+    shell\dirty\count = 0
+    shell\pointer\x = 0
+    shell\pointer\y = 0
+    shell\pointer\visible = 0
+    shell\main/window\frame\x = 0
+    shell\main/window\frame\y = 0
+    shell\main/window\frame\w = 0
+    shell\main/window\frame\h = 0
+    shell\main/window\accent = 0
+    shell\main/window\material = 0
+    shell\disk0\state = 0
+    shell\disk0\pending/since = 0
+    shell\disk0\timeout/ms = 0
+    shell\nexus\revision = 0
+    shell\nexus\create/window = 0
+    shell\nexus\draw/text = 0
+    shell\nexus\draw/rect = 0
+    shell\nexus\show/message = 0
+    debug/stage(0x40)
+
+    if shell/bootstrap(shell, sys/table) == 0 {
+        return uefi/halt(sys/table, 70)
+    }
+
+    debug/stage(0x46) // 'F' (Bootstrap success)
+
+    // 在调用 shell/run 之前，利用局部变量再次强制刷新指针
+    let final/shell/base: UInt64 = shell/base 
+    debug/stage(68)   // 'D'
+    
+    // 强制将指针装载进 RDI (SystemV ABI 的第一个参数寄存器)
+    hardware {
+        var rdi: reg<"rdi", UInt64>
+        rdi = final/shell/base
+    }
+
+    let run/status: UInt64 = shell/run(cast<ptr<AER/SHELL>>(final/shell/base))
+    shell/prepare/firmware/return(cast<ptr<AER/SHELL>>(final/shell/base))
+
+    if shell\back\base != 0 && shell\back\base != shell\back\frame/buffer {
+        uefi/free/pool(sys/table, shell\back\base)
+    }
+    uefi/free/pool(sys/table, shell/base)
+    return run/status
+}

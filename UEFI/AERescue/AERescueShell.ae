@@ -1,0 +1,1200 @@
+const DEC/TEN: UInt32 = 10
+const DEC/HUNDRED: UInt32 = 100
+const DEC/THOUSAND: UInt32 = 1000
+const ALPHA/MAX: UInt32 = 255
+const GLYPH/WIDTH: UInt32 = 10
+const GLYPH/HEIGHT: UInt32 = 12
+const GLYPH/ADVANCE: UInt32 = 11
+
+struct AER/POINTER/STATE {
+    x: UInt32
+    y: UInt32
+    visible: UInt64
+}
+
+struct AER/DRIVE/STATE {
+    state: UInt64
+    pending/since: UInt64
+    timeout/ms: UInt64
+}
+
+struct AER/WINDOW {
+    frame: AER/RECT
+    accent: UInt32
+    material: UInt32
+}
+
+struct AER/TEXT/STYLE {
+    color: UInt32
+    glow/color: UInt32
+    shadow/color: UInt32
+    glow/alpha: UInt32
+    shadow/alpha: UInt32
+    scale: UInt32
+    tracking: UInt32
+}
+
+struct AER/NEXUS/PROTOCOL {
+    revision: UInt64
+    create/window: UInt64
+    draw/text: UInt64
+    draw/rect: UInt64
+    show/message: UInt64
+}
+
+struct AER/SHELL {
+    sys/table: UInt64
+    gop: UInt64
+    ticks: UInt64
+    exit/requested: UInt64
+    last/esc/ticks: UInt64
+    exit/armed/after: UInt64
+    memory/total/mb: UInt32
+    memory/used/mb: UInt32
+    clock/year: UInt16
+    clock/month: UInt8
+    clock/day: UInt8
+    clock/hour: UInt8
+    clock/minute: UInt8
+    clock/second: UInt8
+    sensor/cpu/temp: UInt32
+    sensor/cpu/online: UInt64
+    back: AER/BACK/BUFFER
+    dirty: AER/DIRTY/LIST
+    pointer: AER/POINTER/STATE
+    main/window: AER/WINDOW
+    disk0: AER/DRIVE/STATE
+    nexus: AER/NEXUS/PROTOCOL
+}
+
+func shell/fill(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, w: UInt32, h: UInt32, color: UInt32) {
+    let rect: AER/RECT
+    rect/set(&rect as ptr<AER/RECT>, x, y, w, h)
+    back/fill/rect(back, &rect as ptr<AER/RECT>, color)
+}
+
+// (在 shell/fill 函数定义的紧接着下方插入)
+func shell/draw/progress(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, w: UInt32, h: UInt32, fill: UInt32, fg: UInt32, bg: UInt32) {
+    // 绘制底色
+    shell/fill(back, x, y, w, h, bg)
+    // 绘制进度高亮色
+    if fill > 0 {
+        let fw: UInt32 = fill
+        if fw > w { 
+            fw = w 
+        }
+        shell/fill(back, x, y, fw, h, fg)
+    }
+}
+
+func shell/draw/shadow(back: ptr<AER/BACK/BUFFER>, frame: ptr<AER/RECT>) {
+    shell/fill(back, frame\x + 8, frame\y + frame\h, frame\w, 10, 0x33000000)
+    shell/fill(back, frame\x + frame\w, frame\y + 8, 10, frame\h, 0x22000000)
+}
+
+func text/style/set(style: ptr<AER/TEXT/STYLE>, color: UInt32, glow/color: UInt32, shadow/color: UInt32, glow/alpha: UInt32, shadow/alpha: UInt32, scale: UInt32, tracking: UInt32) {
+    style\color = color
+    style\glow/color = glow/color
+    style\shadow/color = shadow/color
+    style\glow/alpha = glow/alpha
+    style\shadow/alpha = shadow/alpha
+    style\scale = scale
+    style\tracking = tracking
+}
+
+func text/advance(style: ptr<AER/TEXT/STYLE>) : UInt32 {
+    return (GLYPH/ADVANCE * style\scale) + style\tracking
+}
+
+func alpha/modulate(alpha: UInt32, factor: UInt32) : UInt32 {
+    if alpha == 0 || factor == 0 {
+        return 0
+    }
+    if factor >= ALPHA/MAX {
+        return alpha
+    }
+    let numer: UInt64 = ((alpha as UInt64) * (factor as UInt64)) + 127
+    let alpha/max/u64: UInt64 = ALPHA/MAX as UInt64
+    return cast<UInt32>(numer / alpha/max/u64)
+}
+
+func glyph/alpha/row(ch: UInt8, row: UInt32) : UInt32 {
+    if row >= GLYPH/HEIGHT {
+        return 0
+    }
+    if ch == 32 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x00000 }
+        if row == 2 { return 0x00000 }
+        if row == 3 { return 0x00000 }
+        if row == 4 { return 0x00000 }
+        if row == 5 { return 0x00000 }
+        if row == 6 { return 0x00000 }
+        if row == 7 { return 0x00000 }
+        if row == 8 { return 0x00000 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 45 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x00000 }
+        if row == 2 { return 0x00000 }
+        if row == 3 { return 0x00000 }
+        if row == 4 { return 0x00000 }
+        if row == 5 { return 0x3FFD0 }
+        if row == 6 { return 0x00000 }
+        if row == 7 { return 0x00000 }
+        if row == 8 { return 0x00000 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 46 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x00000 }
+        if row == 2 { return 0x00000 }
+        if row == 3 { return 0x00000 }
+        if row == 4 { return 0x00000 }
+        if row == 5 { return 0x00000 }
+        if row == 6 { return 0x00000 }
+        if row == 7 { return 0x02D00 }
+        if row == 8 { return 0x02D00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 47 {
+        if row == 0 { return 0x002C0 }
+        if row == 1 { return 0x00380 }
+        if row == 2 { return 0x00B40 }
+        if row == 3 { return 0x00E00 }
+        if row == 4 { return 0x01D00 }
+        if row == 5 { return 0x03C00 }
+        if row == 6 { return 0x07400 }
+        if row == 7 { return 0x0F000 }
+        if row == 8 { return 0x1E000 }
+        if row == 9 { return 0x2C000 }
+        if row == 10 { return 0x28000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 58 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x00000 }
+        if row == 2 { return 0x00000 }
+        if row == 3 { return 0x02D00 }
+        if row == 4 { return 0x02D00 }
+        if row == 5 { return 0x00000 }
+        if row == 6 { return 0x00000 }
+        if row == 7 { return 0x02D00 }
+        if row == 8 { return 0x02D00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 60 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x00000 }
+        if row == 2 { return 0x001E0 }
+        if row == 3 { return 0x01F80 }
+        if row == 4 { return 0x1F900 }
+        if row == 5 { return 0xBD000 }
+        if row == 6 { return 0x1F900 }
+        if row == 7 { return 0x01F90 }
+        if row == 8 { return 0x001E0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 62 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x00000 }
+        if row == 2 { return 0x78000 }
+        if row == 3 { return 0x1F800 }
+        if row == 4 { return 0x01F80 }
+        if row == 5 { return 0x003F4 }
+        if row == 6 { return 0x02F80 }
+        if row == 7 { return 0x1F800 }
+        if row == 8 { return 0x78000 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 48 {
+        if row == 0 { return 0x0BE00 }
+        if row == 1 { return 0x1D380 }
+        if row == 2 { return 0x2C1C0 }
+        if row == 3 { return 0x381D0 }
+        if row == 4 { return 0x381D0 }
+        if row == 5 { return 0x381D0 }
+        if row == 6 { return 0x2C1C0 }
+        if row == 7 { return 0x1D780 }
+        if row == 8 { return 0x07E00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 49 {
+        if row == 0 { return 0x1AC00 }
+        if row == 1 { return 0x3FC00 }
+        if row == 2 { return 0x02C00 }
+        if row == 3 { return 0x02C00 }
+        if row == 4 { return 0x02C00 }
+        if row == 5 { return 0x02C00 }
+        if row == 6 { return 0x02C00 }
+        if row == 7 { return 0x02C00 }
+        if row == 8 { return 0x3FFD0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 50 {
+        if row == 0 { return 0x0BE00 }
+        if row == 1 { return 0x2D3C0 }
+        if row == 2 { return 0x341C0 }
+        if row == 3 { return 0x003C0 }
+        if row == 4 { return 0x00B80 }
+        if row == 5 { return 0x02E00 }
+        if row == 6 { return 0x0B800 }
+        if row == 7 { return 0x3E000 }
+        if row == 8 { return 0x7FFC0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 51 {
+        if row == 0 { return 0x1BF40 }
+        if row == 1 { return 0x2D2C0 }
+        if row == 2 { return 0x001C0 }
+        if row == 3 { return 0x003C0 }
+        if row == 4 { return 0x02F80 }
+        if row == 5 { return 0x007D0 }
+        if row == 6 { return 0x000E0 }
+        if row == 7 { return 0x342D0 }
+        if row == 8 { return 0x2FF40 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 52 {
+        if row == 0 { return 0x00F40 }
+        if row == 1 { return 0x02F40 }
+        if row == 2 { return 0x03F40 }
+        if row == 3 { return 0x0BB40 }
+        if row == 4 { return 0x0E740 }
+        if row == 5 { return 0x2D740 }
+        if row == 6 { return 0x3FFC0 }
+        if row == 7 { return 0x00740 }
+        if row == 8 { return 0x02FC0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 53 {
+        if row == 0 { return 0x2FF80 }
+        if row == 1 { return 0x2C000 }
+        if row == 2 { return 0x2C000 }
+        if row == 3 { return 0x2FF40 }
+        if row == 4 { return 0x1D2C0 }
+        if row == 5 { return 0x000D0 }
+        if row == 6 { return 0x000D0 }
+        if row == 7 { return 0x382D0 }
+        if row == 8 { return 0x2FF40 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 54 {
+        if row == 0 { return 0x01FD0 }
+        if row == 1 { return 0x07900 }
+        if row == 2 { return 0x0E000 }
+        if row == 3 { return 0x1EF40 }
+        if row == 4 { return 0x2F6D0 }
+        if row == 5 { return 0x2D0E0 }
+        if row == 6 { return 0x1D0E0 }
+        if row == 7 { return 0x0E1D0 }
+        if row == 8 { return 0x07F80 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 55 {
+        if row == 0 { return 0x3FFD0 }
+        if row == 1 { return 0x342C0 }
+        if row == 2 { return 0x00380 }
+        if row == 3 { return 0x00740 }
+        if row == 4 { return 0x00B00 }
+        if row == 5 { return 0x00F00 }
+        if row == 6 { return 0x01E00 }
+        if row == 7 { return 0x02D00 }
+        if row == 8 { return 0x02C00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 56 {
+        if row == 0 { return 0x0BF40 }
+        if row == 1 { return 0x2D3C0 }
+        if row == 2 { return 0x2C1C0 }
+        if row == 3 { return 0x2D3C0 }
+        if row == 4 { return 0x0FF80 }
+        if row == 5 { return 0x2D3C0 }
+        if row == 6 { return 0x381D0 }
+        if row == 7 { return 0x2D2C0 }
+        if row == 8 { return 0x0BF40 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 57 {
+        if row == 0 { return 0x07F40 }
+        if row == 1 { return 0x1E3C0 }
+        if row == 2 { return 0x2C1D0 }
+        if row == 3 { return 0x2C1E0 }
+        if row == 4 { return 0x1E7E0 }
+        if row == 5 { return 0x07EE0 }
+        if row == 6 { return 0x002D0 }
+        if row == 7 { return 0x00B80 }
+        if row == 8 { return 0x1FD00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 65 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x3FD00 }
+        if row == 2 { return 0x07E00 }
+        if row == 3 { return 0x0FB00 }
+        if row == 4 { return 0x0E740 }
+        if row == 5 { return 0x2D3C0 }
+        if row == 6 { return 0x3FFD0 }
+        if row == 7 { return 0x740E0 }
+        if row == 8 { return 0xFD3F8 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 66 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFFF80 }
+        if row == 2 { return 0x2C1D0 }
+        if row == 3 { return 0x2C2D0 }
+        if row == 4 { return 0x2FFC0 }
+        if row == 5 { return 0x2C1F0 }
+        if row == 6 { return 0x2C0B0 }
+        if row == 7 { return 0x2C0B0 }
+        if row == 8 { return 0xFFFD0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 67 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x0BEA0 }
+        if row == 2 { return 0x3D1F0 }
+        if row == 3 { return 0x740A0 }
+        if row == 4 { return 0xB0000 }
+        if row == 5 { return 0xB0000 }
+        if row == 6 { return 0xB0000 }
+        if row == 7 { return 0x3D1B0 }
+        if row == 8 { return 0x0BFD0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 68 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFFE40 }
+        if row == 2 { return 0x382C0 }
+        if row == 3 { return 0x380E0 }
+        if row == 4 { return 0x380E0 }
+        if row == 5 { return 0x380B0 }
+        if row == 6 { return 0x380E0 }
+        if row == 7 { return 0x382D0 }
+        if row == 8 { return 0xFFF40 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 69 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFFFE0 }
+        if row == 2 { return 0x2C0E0 }
+        if row == 3 { return 0x2CDD0 }
+        if row == 4 { return 0x2FE00 }
+        if row == 5 { return 0x2CD00 }
+        if row == 6 { return 0x2C0A0 }
+        if row == 7 { return 0x2C0B0 }
+        if row == 8 { return 0xFFFF0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 70 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x7FFF4 }
+        if row == 2 { return 0x1D074 }
+        if row == 3 { return 0x1DB74 }
+        if row == 4 { return 0x1FF00 }
+        if row == 5 { return 0x1DB00 }
+        if row == 6 { return 0x1D000 }
+        if row == 7 { return 0x1D000 }
+        if row == 8 { return 0x7FE00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 71 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x0BFA0 }
+        if row == 2 { return 0x3D1F0 }
+        if row == 3 { return 0x740A0 }
+        if row == 4 { return 0xB0000 }
+        if row == 5 { return 0xB0FF4 }
+        if row == 6 { return 0xB00B0 }
+        if row == 7 { return 0x391F0 }
+        if row == 8 { return 0x1BF90 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 72 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x7F7F0 }
+        if row == 2 { return 0x2C1D0 }
+        if row == 3 { return 0x2C1D0 }
+        if row == 4 { return 0x2FFD0 }
+        if row == 5 { return 0x2C1D0 }
+        if row == 6 { return 0x2C1D0 }
+        if row == 7 { return 0x2C1D0 }
+        if row == 8 { return 0xBF7F4 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 73 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x3FFD0 }
+        if row == 2 { return 0x02C00 }
+        if row == 3 { return 0x02C00 }
+        if row == 4 { return 0x02C00 }
+        if row == 5 { return 0x02C00 }
+        if row == 6 { return 0x02C00 }
+        if row == 7 { return 0x02C00 }
+        if row == 8 { return 0x3FFD0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 74 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x07FF8 }
+        if row == 2 { return 0x002C0 }
+        if row == 3 { return 0x002C0 }
+        if row == 4 { return 0x002C0 }
+        if row == 5 { return 0x702C0 }
+        if row == 6 { return 0x742C0 }
+        if row == 7 { return 0x74780 }
+        if row == 8 { return 0x6FE00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 75 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFF7F4 }
+        if row == 2 { return 0x2C7C0 }
+        if row == 3 { return 0x2EF00 }
+        if row == 4 { return 0x2FC00 }
+        if row == 5 { return 0x2FF00 }
+        if row == 6 { return 0x2D780 }
+        if row == 7 { return 0x2C2C0 }
+        if row == 8 { return 0xFF4F8 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 76 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xBFD00 }
+        if row == 2 { return 0x0E000 }
+        if row == 3 { return 0x0E000 }
+        if row == 4 { return 0x0E000 }
+        if row == 5 { return 0x0E000 }
+        if row == 6 { return 0x0E070 }
+        if row == 7 { return 0x0E070 }
+        if row == 8 { return 0xBFFF0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 77 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xF81F8 }
+        if row == 2 { return 0xBC2F0 }
+        if row == 3 { return 0xBE3F0 }
+        if row == 4 { return 0xBBBB0 }
+        if row == 5 { return 0xB7EB0 }
+        if row == 6 { return 0xB2DB0 }
+        if row == 7 { return 0xB00B0 }
+        if row == 8 { return 0xFD3F8 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 78 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFC7F4 }
+        if row == 2 { return 0x3E0E0 }
+        if row == 3 { return 0x3F4E0 }
+        if row == 4 { return 0x3BCE0 }
+        if row == 5 { return 0x39EE0 }
+        if row == 6 { return 0x38BE0 }
+        if row == 7 { return 0x383E0 }
+        if row == 8 { return 0xFF1E0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 79 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x0BF40 }
+        if row == 2 { return 0x3D2D0 }
+        if row == 3 { return 0xB40B0 }
+        if row == 4 { return 0xB0070 }
+        if row == 5 { return 0xB0070 }
+        if row == 6 { return 0xB40B0 }
+        if row == 7 { return 0x3D2D0 }
+        if row == 8 { return 0x0BF40 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 80 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x7FF90 }
+        if row == 2 { return 0x0E0F0 }
+        if row == 3 { return 0x0E0B0 }
+        if row == 4 { return 0x0E1F0 }
+        if row == 5 { return 0x0FF80 }
+        if row == 6 { return 0x0E000 }
+        if row == 7 { return 0x0E000 }
+        if row == 8 { return 0x7FE00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 81 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x0BF40 }
+        if row == 2 { return 0x3D2D0 }
+        if row == 3 { return 0xB40B0 }
+        if row == 4 { return 0xB0070 }
+        if row == 5 { return 0xB0070 }
+        if row == 6 { return 0xB40B0 }
+        if row == 7 { return 0x3D2D0 }
+        if row == 8 { return 0x1FF40 }
+        if row == 9 { return 0x0FE70 }
+        if row == 10 { return 0x1FFE0 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 82 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFFF40 }
+        if row == 2 { return 0x2C2D0 }
+        if row == 3 { return 0x2C0D0 }
+        if row == 4 { return 0x2C6D0 }
+        if row == 5 { return 0x2FF40 }
+        if row == 6 { return 0x2C780 }
+        if row == 7 { return 0x2C1D0 }
+        if row == 8 { return 0xFF4B8 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 83 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x0BED0 }
+        if row == 2 { return 0x2D1D0 }
+        if row == 3 { return 0x3C000 }
+        if row == 4 { return 0x1FE40 }
+        if row == 5 { return 0x06FD0 }
+        if row == 6 { return 0x001E0 }
+        if row == 7 { return 0x381D0 }
+        if row == 8 { return 0x37F80 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 84 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xBFFF0 }
+        if row == 2 { return 0xB2CB0 }
+        if row == 3 { return 0x72CB0 }
+        if row == 4 { return 0x02C00 }
+        if row == 5 { return 0x02C00 }
+        if row == 6 { return 0x02C00 }
+        if row == 7 { return 0x02C00 }
+        if row == 8 { return 0x1FF80 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 85 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFF7F4 }
+        if row == 2 { return 0x380E0 }
+        if row == 3 { return 0x380E0 }
+        if row == 4 { return 0x380E0 }
+        if row == 5 { return 0x380E0 }
+        if row == 6 { return 0x380D0 }
+        if row == 7 { return 0x2D2C0 }
+        if row == 8 { return 0x0BF40 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 86 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFD3F8 }
+        if row == 2 { return 0x780E0 }
+        if row == 3 { return 0x3C1D0 }
+        if row == 4 { return 0x1D3C0 }
+        if row == 5 { return 0x0E740 }
+        if row == 6 { return 0x0BB00 }
+        if row == 7 { return 0x07E00 }
+        if row == 8 { return 0x02D00 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 87 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xFE7F8 }
+        if row == 2 { return 0xB00B0 }
+        if row == 3 { return 0x73DB0 }
+        if row == 4 { return 0x77EE0 }
+        if row == 5 { return 0x3FFE0 }
+        if row == 6 { return 0x3F7E0 }
+        if row == 7 { return 0x3E3D0 }
+        if row == 8 { return 0x3C2D0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 88 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xBE3F0 }
+        if row == 2 { return 0x2D3C0 }
+        if row == 3 { return 0x0FB40 }
+        if row == 4 { return 0x07E00 }
+        if row == 5 { return 0x07E00 }
+        if row == 6 { return 0x0FB40 }
+        if row == 7 { return 0x2D3D0 }
+        if row == 8 { return 0xFE7F4 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 89 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0xBD3F4 }
+        if row == 2 { return 0x2D3C0 }
+        if row == 3 { return 0x0F740 }
+        if row == 4 { return 0x07E00 }
+        if row == 5 { return 0x02C00 }
+        if row == 6 { return 0x02C00 }
+        if row == 7 { return 0x02C00 }
+        if row == 8 { return 0x1FFC0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    if ch == 90 {
+        if row == 0 { return 0x00000 }
+        if row == 1 { return 0x3FFD0 }
+        if row == 2 { return 0x3C7C0 }
+        if row == 3 { return 0x28F40 }
+        if row == 4 { return 0x02D00 }
+        if row == 5 { return 0x07800 }
+        if row == 6 { return 0x0F0D0 }
+        if row == 7 { return 0x2D0E0 }
+        if row == 8 { return 0x3FFE0 }
+        if row == 9 { return 0x00000 }
+        if row == 10 { return 0x00000 }
+        if row == 11 { return 0x00000 }
+        return 0
+    }
+    return 0
+}
+
+func glyph/alpha/level(packed: UInt32, col: UInt32) : UInt32 {
+    let shift: UInt32 = (GLYPH/WIDTH - 1 - col) * 2
+    return (packed >> shift) & 0x3
+}
+
+func glyph/alpha/coverage(level: UInt32) : UInt32 {
+    if level == 0 {
+        return 0
+    }
+    if level == 1 {
+        return 132
+    }
+    if level == 2 {
+        return 224
+    }
+    return 255
+}
+
+func draw/glyph/layer(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, ch: UInt8, color: UInt32, scale: UInt32, alpha/factor: UInt32) {
+    let row: UInt32 = 0
+    while row < GLYPH/HEIGHT {
+        let packed: UInt32 = glyph/alpha/row(ch, row)
+        let col: UInt32 = 0
+        while col < GLYPH/WIDTH {
+            let coverage: UInt32 = glyph/alpha/coverage(glyph/alpha/level(packed, col))
+            let alpha: UInt32 = alpha/modulate(coverage, alpha/factor)
+            if alpha != 0 {
+                let sy: UInt32 = 0
+                while sy < scale {
+                    let sx: UInt32 = 0
+                    while sx < scale {
+                        pixel/blend(back, x + (col * scale) + sx, y + (row * scale) + sy, color, alpha)
+                        sx = sx + 1
+                    }
+                    sy = sy + 1
+                }
+            }
+            col = col + 1
+        }
+        row = row + 1
+    }
+}
+
+func text/draw/glyph(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, ch: UInt8, style: ptr<AER/TEXT/STYLE>) {
+    let halo: UInt32 = 0
+    if style\scale > 1 {
+        halo = style\scale - 1
+    }
+
+    if style\shadow/alpha != 0 {
+        draw/glyph/layer(back, x + 1, y + 1, ch, style\shadow/color, style\scale, style\shadow/alpha)
+    }
+    if style\glow/alpha != 0 {
+        if x >= halo {
+            draw/glyph/layer(back, x - halo, y, ch, style\glow/color, style\scale, style\glow/alpha)
+        }
+        draw/glyph/layer(back, x + halo, y, ch, style\glow/color, style\scale, style\glow/alpha)
+        if y >= halo {
+            draw/glyph/layer(back, x, y - halo, ch, style\glow/color, style\scale, style\glow/alpha)
+        }
+        draw/glyph/layer(back, x, y + halo, ch, style\glow/color, style\scale, style\glow/alpha)
+    }
+    if style\scale > 1 {
+        draw/glyph/layer(back, x + 1, y, ch, style\color, style\scale, 96)
+        draw/glyph/layer(back, x, y + 1, ch, style\color, style\scale, 64)
+    }
+    draw/glyph/layer(back, x, y, ch, style\color, style\scale, ALPHA/MAX)
+}
+
+func text/draw/literal(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, a: UInt8, b: UInt8, c: UInt8, d: UInt8, e: UInt8, f: UInt8, g: UInt8, h: UInt8, i: UInt8, j: UInt8, len: UInt32, style: ptr<AER/TEXT/STYLE>) {
+    let advance: UInt32 = text/advance(style)
+    if len > 0 { text/draw/glyph(back, x + (0 * advance), y, a, style) }
+    if len > 1 { text/draw/glyph(back, x + (1 * advance), y, b, style) }
+    if len > 2 { text/draw/glyph(back, x + (2 * advance), y, c, style) }
+    if len > 3 { text/draw/glyph(back, x + (3 * advance), y, d, style) }
+    if len > 4 { text/draw/glyph(back, x + (4 * advance), y, e, style) }
+    if len > 5 { text/draw/glyph(back, x + (5 * advance), y, f, style) }
+    if len > 6 { text/draw/glyph(back, x + (6 * advance), y, g, style) }
+    if len > 7 { text/draw/glyph(back, x + (7 * advance), y, h, style) }
+    if len > 8 { text/draw/glyph(back, x + (8 * advance), y, i, style) }
+    if len > 9 { text/draw/glyph(back, x + (9 * advance), y, j, style) }
+}
+
+func text/draw/u32(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, value: UInt32, min/digits: UInt32, style: ptr<AER/TEXT/STYLE>) {
+    let div: UInt32 = DEC/THOUSAND * DEC/TEN
+    let started: UInt32 = 0
+    let pos: UInt32 = 0
+    let advance: UInt32 = text/advance(style)
+    while div > 0 {
+        let digit: UInt32 = (value / div) % DEC/TEN
+        if digit != 0 || started != 0 || div == 1 || min/digits > pos + 1 {
+            text/draw/glyph(back, x + (pos * advance), y, cast<UInt8>(48 + digit), style)
+            started = 1
+            pos = pos + 1
+        }
+        div = div / DEC/TEN
+    }
+}
+
+func text/draw/two(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, value: UInt32, style: ptr<AER/TEXT/STYLE>) {
+    let advance: UInt32 = text/advance(style)
+    text/draw/glyph(back, x, y, cast<UInt8>(48 + ((value / DEC/TEN) % DEC/TEN)), style)
+    text/draw/glyph(back, x + advance, y, cast<UInt8>(48 + (value % DEC/TEN)), style)
+}
+
+func text/draw/four(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, value: UInt32, style: ptr<AER/TEXT/STYLE>) {
+    let advance: UInt32 = text/advance(style)
+    text/draw/glyph(back, x, y, cast<UInt8>(48 + ((value / DEC/THOUSAND) % DEC/TEN)), style)
+    text/draw/glyph(back, x + advance, y, cast<UInt8>(48 + ((value / DEC/HUNDRED) % DEC/TEN)), style)
+    text/draw/glyph(back, x + (2 * advance), y, cast<UInt8>(48 + ((value / DEC/TEN) % DEC/TEN)), style)
+    text/draw/glyph(back, x + (3 * advance), y, cast<UInt8>(48 + (value % DEC/TEN)), style)
+}
+
+func draw/glyph(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, ch: UInt8, color: UInt32, scale: UInt32) {
+    let style: AER/TEXT/STYLE
+    text/style/set(&style as ptr<AER/TEXT/STYLE>, color, color, 0xFF000000, 0, 0, scale, 0)
+    text/draw/glyph(back, x, y, ch, &style as ptr<AER/TEXT/STYLE>)
+}
+
+func draw/literal(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, a: UInt8, b: UInt8, c: UInt8, d: UInt8, e: UInt8, f: UInt8, g: UInt8, h: UInt8, i: UInt8, j: UInt8, len: UInt32, color: UInt32, scale: UInt32) {
+    let style: AER/TEXT/STYLE
+    text/style/set(&style as ptr<AER/TEXT/STYLE>, color, color, 0xFF000000, 0, 0, scale, 0)
+    text/draw/literal(back, x, y, a, b, c, d, e, f, g, h, i, j, len, &style as ptr<AER/TEXT/STYLE>)
+}
+
+func draw/u32(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, value: UInt32, min/digits: UInt32, color: UInt32, scale: UInt32) {
+    let style: AER/TEXT/STYLE
+    text/style/set(&style as ptr<AER/TEXT/STYLE>, color, color, 0xFF000000, 0, 0, scale, 0)
+    text/draw/u32(back, x, y, value, min/digits, &style as ptr<AER/TEXT/STYLE>)
+}
+
+func draw/two(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, value: UInt32, color: UInt32, scale: UInt32) {
+    let style: AER/TEXT/STYLE
+    text/style/set(&style as ptr<AER/TEXT/STYLE>, color, color, 0xFF000000, 0, 0, scale, 0)
+    text/draw/two(back, x, y, value, &style as ptr<AER/TEXT/STYLE>)
+}
+
+func draw/four(back: ptr<AER/BACK/BUFFER>, x: UInt32, y: UInt32, value: UInt32, color: UInt32, scale: UInt32) {
+    let style: AER/TEXT/STYLE
+    text/style/set(&style as ptr<AER/TEXT/STYLE>, color, color, 0xFF000000, 0, 0, scale, 0)
+    text/draw/four(back, x, y, value, &style as ptr<AER/TEXT/STYLE>)
+}
+
+func shell/layout/init(shell: ptr<AER/SHELL>) {
+    let frame/init: AER/RECT
+    rect/set(&frame/init as ptr<AER/RECT>, 72, 54, shell\back\width - 144, shell\back\height - 128)
+    shell\main/window\frame\x = frame/init\x
+    shell\main/window\frame\y = frame/init\y
+    shell\main/window\frame\w = frame/init\w
+    shell\main/window\frame\h = frame/init\h
+    shell\main/window\accent = 0xFF3A6EA5
+    shell\main/window\material = 0xFF16202C
+    shell\pointer\x = 32
+    shell\pointer\y = 32
+    shell\pointer\visible = 1
+    shell\disk0\state = 1
+    shell\disk0\pending/since = 0
+    shell\disk0\timeout/ms = 1500
+    shell\nexus\revision = 0x01000000
+    shell\sensor/cpu/temp = 0
+    shell\sensor/cpu/online = 0
+}
+
+func shell/update/telemetry(shell: ptr<AER/SHELL>) {
+    let sys/table: ptr<EFI/SYSTEM/TABLE> = cast<ptr<EFI/SYSTEM/TABLE>>(shell\sys/table)
+    let now: EFI/TIME
+    if uefi/get/time(sys/table, &now as ptr<EFI/TIME>) == EFI/SUCCESS {
+        shell\clock/year = now\year
+        shell\clock/month = now\month
+        shell\clock/day = now\day
+        shell\clock/hour = now\hour
+        shell\clock/minute = now\minute
+        shell\clock/second = now\second
+    }
+    if (shell\ticks & 63) == 0 {
+        uefi/query/memory(sys/table, &shell\memory/total/mb as ptr<UInt32>, &shell\memory/used/mb as ptr<UInt32>)
+    }
+}
+
+func shell/poll/input(shell: ptr<AER/SHELL>) {
+    if shell == 0 {
+        loop { hardware { hardware\isa\hlt() } }
+    }
+
+    let sys/table: ptr<EFI/SYSTEM/TABLE> = cast<ptr<EFI/SYSTEM/TABLE>>(shell\sys/table)
+    let key: EFI/INPUT/KEY
+
+    if shell\ticks < shell\exit/armed/after {
+        return
+    }
+
+    let st: UInt64 = uefi/read/key(sys/table, &key as ptr<EFI/INPUT/KEY>)
+
+    if st == EFI/SUCCESS {
+        if key\unicode/char == 27 || key\scan/code == 23 {
+            if shell\ticks - shell\last/esc/ticks < 80 {
+                shell\exit/requested = 1
+            }
+            shell\last/esc/ticks = shell\ticks
+        }
+    }
+}
+
+func shell/draw/chrome(shell: ptr<AER/SHELL>) {
+    let whole: AER/RECT
+    let taskbar: AER/RECT
+    let titlebar: AER/RECT
+    let info/hero: AER/RECT
+    let cpu/card: AER/RECT
+    let mem/card: AER/RECT
+    let time/card: AER/RECT
+    let footer/card: AER/RECT
+    let cursor: AER/RECT
+    let back: ptr<AER/BACK/BUFFER> = &shell\back as ptr<AER/BACK/BUFFER>
+    let dirty: ptr<AER/DIRTY/LIST> = &shell\dirty as ptr<AER/DIRTY/LIST>
+    let window/frame: ptr<AER/RECT> = &shell\main/window\frame as ptr<AER/RECT>
+    let mem/pct: UInt32 = 0
+    let mem/fill: UInt32 = 0
+    let title/style: AER/TEXT/STYLE
+    let hero/style: AER/TEXT/STYLE
+    let body/style: AER/TEXT/STYLE
+    let label/style: AER/TEXT/STYLE
+    let metric/style: AER/TEXT/STYLE
+    let warning/style: AER/TEXT/STYLE
+    let date/style: AER/TEXT/STYLE
+    let footer/style: AER/TEXT/STYLE
+
+    text/style/set(&title/style as ptr<AER/TEXT/STYLE>, 0xFFF6FBFF, 0xFF8FB9E8, 0xFF000000, 46, 82, 2, 1)
+    text/style/set(&hero/style as ptr<AER/TEXT/STYLE>, 0xFFEAF2FA, 0xFF89B4E8, 0xFF000000, 36, 72, 2, 1)
+    text/style/set(&body/style as ptr<AER/TEXT/STYLE>, 0xFFBFD1E3, 0xFF89B4E8, 0xFF000000, 16, 42, 1, 1)
+    text/style/set(&label/style as ptr<AER/TEXT/STYLE>, 0xFFEAF2FA, 0xFF89B4E8, 0xFF000000, 18, 52, 1, 1)
+    text/style/set(&metric/style as ptr<AER/TEXT/STYLE>, 0xFFF7FBFF, 0xFF7ACB92, 0xFF000000, 28, 74, 2, 1)
+    text/style/set(&warning/style as ptr<AER/TEXT/STYLE>, 0xFFE7A3A0, 0xFFE7A3A0, 0xFF000000, 20, 72, 2, 1)
+    text/style/set(&date/style as ptr<AER/TEXT/STYLE>, 0xFF9FB3C7, 0xFF89B4E8, 0xFF000000, 10, 36, 1, 1)
+    text/style/set(&footer/style as ptr<AER/TEXT/STYLE>, 0xFFD8E6F4, 0xFF89B4E8, 0xFF000000, 12, 36, 1, 1)
+
+    rect/set(&whole as ptr<AER/RECT>, 0, 0, shell\back\width, shell\back\height)
+    back/fill/rect(back, &whole as ptr<AER/RECT>, 0xFF0C1218)
+    shell/fill(back, 0, 0, shell\back\width, 112, 0xFF111A24)
+    shell/fill(back, 0, 112, shell\back\width, 2, 0xFF1A2633)
+
+    rect/set(&taskbar as ptr<AER/RECT>, 0, shell\back\height - 52, shell\back\width, 52)
+    back/fill/rect(back, &taskbar as ptr<AER/RECT>, 0xFF101820)
+    shell/fill(back, 0, shell\back\height - 52, shell\back\width, 2, 0xFF233446)
+
+    shell/draw/shadow(back, window/frame)
+    back/fill/rect(back, window/frame, shell\main/window\material)
+    shell/fill(back, window/frame\x + 8, window/frame\y + 8, window/frame\w - 16, window/frame\h - 16, 0xFF1B2734)
+
+    rect/set(&titlebar as ptr<AER/RECT>, window/frame\x, window/frame\y, window/frame\w, 42)
+    back/fill/rect(back, &titlebar as ptr<AER/RECT>, shell\main/window\accent)
+    shell/fill(back, titlebar\x, titlebar\y + titlebar\h - 1, titlebar\w, 1, 0xFF5A87B9)
+    shell/fill(back, titlebar\x + titlebar\w - 96, titlebar\y + 11, 16, 16, 0xFFDCE6F2)
+    shell/fill(back, titlebar\x + titlebar\w - 68, titlebar\y + 11, 16, 16, 0xFFBFD0E3)
+    shell/fill(back, titlebar\x + titlebar\w - 40, titlebar\y + 11, 16, 16, 0xFFE7A3A0)
+
+    rect/set(&info/hero as ptr<AER/RECT>, window/frame\x + 28, window/frame\y + 66, window/frame\w - 56, 112)
+    back/fill/rect(back, &info/hero as ptr<AER/RECT>, 0xFF213244)
+    shell/fill(back, info/hero\x, info/hero\y, info/hero\w, 2, 0xFF3C6A9C)
+    shell/fill(back, info/hero\x, info/hero\y + info/hero\h - 26, info/hero\w, 26, 0xFF182432)
+
+    rect/set(&cpu/card as ptr<AER/RECT>, window/frame\x + 28, window/frame\y + 210, 248, 150)
+    rect/set(&mem/card as ptr<AER/RECT>, cpu/card\x + 272, cpu/card\y, 248, 150)
+    rect/set(&time/card as ptr<AER/RECT>, mem/card\x + 272, cpu/card\y, window/frame\w - 600, 150)
+    back/fill/rect(back, &cpu/card as ptr<AER/RECT>, 0xFF1A2634)
+    back/fill/rect(back, &mem/card as ptr<AER/RECT>, 0xFF1A2634)
+    back/fill/rect(back, &time/card as ptr<AER/RECT>, 0xFF1A2634)
+    shell/fill(back, cpu/card\x, cpu/card\y, cpu/card\w, 2, 0xFF3A6EA5)
+    shell/fill(back, mem/card\x, mem/card\y, mem/card\w, 2, 0xFF4B8B63)
+    shell/fill(back, time/card\x, time/card\y, time/card\w, 2, 0xFF6B86A7)
+
+    rect/set(&footer/card as ptr<AER/RECT>, window/frame\x + 28, window/frame\y + 386, window/frame\w - 56, 154)
+    back/fill/rect(back, &footer/card as ptr<AER/RECT>, 0xFF182331)
+    shell/fill(back, footer/card\x, footer/card\y, footer/card\w, 2, 0xFF2B4663)
+
+    text/draw/literal(back, titlebar\x + 18, titlebar\y + 7, 65, 69, 82, 69, 83, 67, 85, 69, 0, 0, 8, &title/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, info/hero\x + 22, info/hero\y + 14, 83, 89, 83, 84, 69, 77, 0, 0, 0, 0, 6, &hero/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, info/hero\x + 22, info/hero\y + 50, 85, 69, 70, 73, 32, 71, 79, 80, 0, 0, 8, &body/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, info/hero\x + 22, info/hero\y + 68, 82, 69, 65, 68, 89, 0, 0, 0, 0, 0, 5, &body/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, info/hero\x + 22, info/hero\y + 86, 76, 79, 67, 65, 76, 32, 82, 65, 77, 0, 9, &body/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, info/hero\x + info/hero\w - 214, info/hero\y + 16, 69, 83, 67, 32, 69, 83, 67, 0, 0, 0, 7, &hero/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, info/hero\x + info/hero\w - 214, info/hero\y + 54, 82, 69, 84, 85, 82, 78, 32, 70, 87, 0, 9, &body/style as ptr<AER/TEXT/STYLE>)
+
+    text/draw/literal(back, cpu/card\x + 18, cpu/card\y + 16, 67, 80, 85, 32, 84, 69, 77, 80, 0, 0, 8, &label/style as ptr<AER/TEXT/STYLE>)
+    if shell\sensor/cpu/online != 0 {
+        text/draw/u32(back, cpu/card\x + 18, cpu/card\y + 56, shell\sensor/cpu/temp, 1, &metric/style as ptr<AER/TEXT/STYLE>)
+    } else {
+        text/draw/literal(back, cpu/card\x + 18, cpu/card\y + 58, 79, 70, 70, 76, 73, 78, 69, 0, 0, 0, 7, &warning/style as ptr<AER/TEXT/STYLE>)
+    }
+    text/draw/literal(back, cpu/card\x + 18, cpu/card\y + 118, 83, 69, 78, 83, 79, 82, 32, 78, 47, 65, 10, &date/style as ptr<AER/TEXT/STYLE>)
+
+    text/draw/literal(back, mem/card\x + 18, mem/card\y + 16, 77, 69, 77, 79, 82, 89, 0, 0, 0, 0, 6, &label/style as ptr<AER/TEXT/STYLE>)
+    if shell\memory/total/mb > 0 {
+        mem/pct = (shell\memory/used/mb * 100) / shell\memory/total/mb
+        mem/fill = (mem/pct * 200) / 100
+    }
+    shell/draw/progress(back, mem/card\x + 18, mem/card\y + 56, 208, 14, mem/fill, 0xFF7ACB92, 0xFF263748)
+    text/draw/u32(back, mem/card\x + 18, mem/card\y + 84, shell\memory/used/mb, 1, &hero/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, mem/card\x + 104, mem/card\y + 92, 77, 66, 32, 47, 32, 0, 0, 0, 0, 0, 5, &body/style as ptr<AER/TEXT/STYLE>)
+    text/draw/u32(back, mem/card\x + 162, mem/card\y + 92, shell\memory/total/mb, 1, &body/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, mem/card\x + 18, mem/card\y + 120, 85, 83, 69, 68, 0, 0, 0, 0, 0, 0, 4, &date/style as ptr<AER/TEXT/STYLE>)
+
+    text/draw/literal(back, time/card\x + 18, time/card\y + 16, 82, 84, 67, 0, 0, 0, 0, 0, 0, 0, 3, &label/style as ptr<AER/TEXT/STYLE>)
+    text/draw/two(back, time/card\x + 18, time/card\y + 54, shell\clock/hour as UInt32, &metric/style as ptr<AER/TEXT/STYLE>)
+    text/draw/glyph(back, time/card\x + 88, time/card\y + 54, 58, &metric/style as ptr<AER/TEXT/STYLE>)
+    text/draw/two(back, time/card\x + 108, time/card\y + 54, shell\clock/minute as UInt32, &metric/style as ptr<AER/TEXT/STYLE>)
+    text/draw/glyph(back, time/card\x + 178, time/card\y + 54, 58, &metric/style as ptr<AER/TEXT/STYLE>)
+    text/draw/two(back, time/card\x + 198, time/card\y + 54, shell\clock/second as UInt32, &metric/style as ptr<AER/TEXT/STYLE>)
+    text/draw/four(back, time/card\x + 18, time/card\y + 118, shell\clock/year as UInt32, &date/style as ptr<AER/TEXT/STYLE>)
+    text/draw/glyph(back, time/card\x + 66, time/card\y + 118, 47, &date/style as ptr<AER/TEXT/STYLE>)
+    text/draw/two(back, time/card\x + 80, time/card\y + 118, shell\clock/month as UInt32, &date/style as ptr<AER/TEXT/STYLE>)
+    text/draw/glyph(back, time/card\x + 108, time/card\y + 118, 47, &date/style as ptr<AER/TEXT/STYLE>)
+    text/draw/two(back, time/card\x + 122, time/card\y + 118, shell\clock/day as UInt32, &date/style as ptr<AER/TEXT/STYLE>)
+
+    text/draw/literal(back, footer/card\x + 20, footer/card\y + 18, 80, 73, 80, 69, 32, 82, 69, 65, 68, 89, 10, &label/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, footer/card\x + 20, footer/card\y + 52, 66, 79, 79, 84, 32, 71, 79, 80, 0, 0, 8, &footer/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, footer/card\x + 20, footer/card\y + 76, 70, 87, 32, 82, 69, 84, 85, 82, 78, 0, 9, &footer/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, footer/card\x + 20, footer/card\y + 100, 68, 73, 83, 75, 32, 48, 0, 0, 0, 0, 6, &footer/style as ptr<AER/TEXT/STYLE>)
+    if shell\disk0\state == 3 {
+        text/draw/literal(back, footer/card\x + 150, footer/card\y + 100, 79, 70, 70, 76, 73, 78, 69, 0, 0, 0, 7, &warning/style as ptr<AER/TEXT/STYLE>)
+    } else {
+        if shell\disk0\state == 2 {
+            text/draw/literal(back, footer/card\x + 150, footer/card\y + 100, 80, 69, 78, 68, 73, 78, 71, 0, 0, 0, 7, &footer/style as ptr<AER/TEXT/STYLE>)
+        } else {
+            text/draw/literal(back, footer/card\x + 150, footer/card\y + 100, 73, 68, 76, 69, 0, 0, 0, 0, 0, 0, 4, &footer/style as ptr<AER/TEXT/STYLE>)
+        }
+    }
+    text/draw/literal(back, footer/card\x + 20, footer/card\y + 124, 69, 83, 67, 32, 69, 83, 67, 0, 0, 0, 7, &footer/style as ptr<AER/TEXT/STYLE>)
+    text/draw/literal(back, footer/card\x + 150, footer/card\y + 124, 82, 69, 84, 85, 82, 78, 32, 70, 87, 0, 9, &footer/style as ptr<AER/TEXT/STYLE>)
+
+    if shell\pointer\visible != 0 {
+        shell/fill(back, shell\pointer\x + 2, shell\pointer\y + 2, 10, 16, 0x55000000)
+        rect/set(&cursor as ptr<AER/RECT>, shell\pointer\x, shell\pointer\y, 10, 16)
+        back/fill/rect(back, &cursor as ptr<AER/RECT>, 0xFFF2F4F8)
+    }
+
+    dirty/reset(dirty)
+    dirty/push(dirty, 0, 0, shell\back\width, shell\back\height)
+}
+
+func shell/render(shell: ptr<AER/SHELL>) {
+    let back: ptr<AER/BACK/BUFFER> = &shell\back as ptr<AER/BACK/BUFFER>
+    let dirty: ptr<AER/DIRTY/LIST> = &shell\dirty as ptr<AER/DIRTY/LIST>
+    shell/draw/chrome(shell)
+    back/flush/dirty(back, dirty)
+}
+
+func shell/prepare/firmware/return(shell: ptr<AER/SHELL>) : UInt64 {
+    if shell == 0 {
+        return EFI/NOT/READY
+    }
+
+    let sys/table: ptr<EFI/SYSTEM/TABLE> = cast<ptr<EFI/SYSTEM/TABLE>>(shell\sys/table)
+    let dirty: ptr<AER/DIRTY/LIST> = &shell\dirty as ptr<AER/DIRTY/LIST>
+    let back: ptr<AER/BACK/BUFFER> = &shell\back as ptr<AER/BACK/BUFFER>
+
+    shell\pointer\visible = 0
+    shell/render(shell)
+    dirty/reset(dirty)
+    dirty/push(dirty, 0, 0, shell\back\width, shell\back\height)
+    back/flush/dirty(back, dirty)
+    uefi/disable/watchdog(sys/table)
+    return uefi/quiesce/input(sys/table)
+}
+
+func shell/watchdog/tick(shell: ptr<AER/SHELL>) {
+    if shell\disk0\state == 1 && shell\ticks >= 64 {
+        shell\disk0\state = 2
+        shell\disk0\pending/since = shell\ticks * 10
+    }
+    if shell\disk0\state == 2 {
+        let elapsed: UInt64 = (shell\ticks * 10) - shell\disk0\pending/since
+        if elapsed > shell\disk0\timeout/ms {
+            shell\disk0\state = 3
+            debug/stage(90)
+        }
+    }
+}
+
+func shell/pointer/tick(shell: ptr<AER/SHELL>) {
+    if (shell\ticks & 7) == 0 {
+        if shell\pointer\x + 12 < shell\back\width {
+            shell\pointer\x = shell\pointer\x + 12
+        } else {
+            shell\pointer\x = 24
+        }
+    }
+}
+
+func shell/bootstrap(shell: ptr<AER/SHELL>, sys/table: ptr<EFI/SYSTEM/TABLE>) : Bool {
+    shell\sys/table = cast<UInt64>(sys/table)
+    shell\exit/armed/after = 300
+    uefi/reset/input(sys/table)
+    debug/stage(0x41)
+    shell\gop = uefi/locate/gop(sys/table)
+    if shell\gop == 0 {
+        debug/stage(0x42)
+        return false
+    }
+    debug/stage(0x43)
+    if buffer/init(&shell\back as ptr<AER/BACK/BUFFER>, shell\gop, sys/table) == 0 {
+        debug/stage(0x44)
+        return false
+    }
+    debug/stage(0x45)
+    shell/layout/init(shell)
+    shell/update/telemetry(shell)
+    debug/stage(0x46)
+    return true
+}
+
+func shell/run(shell: ptr<AER/SHELL>) : UInt64 {
+    let sys/table: ptr<EFI/SYSTEM/TABLE> = cast<ptr<EFI/SYSTEM/TABLE>>(shell\sys/table)
+
+    loop {
+        shell/poll/input(shell)
+        if shell\exit/requested != 0 {
+            return EFI/SUCCESS
+        }
+        shell/pointer/tick(shell)
+        shell/watchdog/tick(shell)
+        shell/update/telemetry(shell)
+        shell/render(shell)
+        uefi/stall(sys/table, 10000)
+        shell\ticks = shell\ticks + 1
+    }
+    return EFI/SUCCESS
+}
